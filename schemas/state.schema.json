@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://context-loom.dev/schemas/state-v1.json",
+  "type": "object",
+  "required": ["schema_version", "workflow_id", "baseline", "planning", "batches", "tasks"],
+  "properties": {
+    "schema_version": {"const": "context-loom/state-v1"},
+    "workflow_id": {"type": "string", "minLength": 1},
+    "baseline": {"type": "object"},
+    "planning": {"type": "object"},
+    "batches": {"type": "array"},
+    "tasks": {"type": "object"}
+  }
+}
+

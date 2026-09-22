@@ -1,0 +1,10 @@
+{
+  "schema_version": "context-loom/worker-result-v1",
+  "task_id": "TASK-001",
+  "status": "completed",
+  "baseline_sha256": "copy-from-the-active-packet",
+  "packet_sha256": "copy-from-the-active-packet",
+  "content": "Write the worker's domain result here.",
+  "trace": {"source_refs": ["PROJECT-SPEC"]}
+}
+

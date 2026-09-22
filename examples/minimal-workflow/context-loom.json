@@ -1,0 +1,15 @@
+{
+  "schema_version": "context-loom/workflow-v1",
+  "workflow_id": "minimal-demo",
+  "root": ".",
+  "sources": [
+    {"source_id": "PROJECT-CONTEXT", "path": "context.md", "role": "context"},
+    {"source_id": "PROJECT-SPEC", "path": "spec.md", "role": "spec"}
+  ],
+  "tasks": [
+    {"task_id": "TASK-001", "title": "Extract the primary requirement", "complexity": "simple", "source_refs": ["PROJECT-SPEC"], "payload": {"kind": "summary"}},
+    {"task_id": "TASK-002", "title": "Identify the risky edge case", "complexity": "complex", "source_refs": ["PROJECT-CONTEXT", "PROJECT-SPEC"], "payload": {"kind": "risk"}},
+    {"task_id": "TASK-003", "title": "Write the acceptance check", "complexity": "simple", "source_refs": ["PROJECT-SPEC"], "payload": {"kind": "acceptance"}}
+  ]
+}
+
