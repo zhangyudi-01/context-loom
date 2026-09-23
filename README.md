@@ -85,6 +85,10 @@ cannot drift during recovery. See [agent adapters](docs/agent-adapters.md) and
 
 See [the minimal example](examples/minimal-workflow/README.md) for a complete local run.
 
+For a read-only trial on an existing software-testing module, see the
+[isolated testing pilot](docs/quickstart-testing-pilot.md). `$loom-test-points` guides setup,
+preflight and the optional paid run; it does not overwrite the original module's artifacts.
+
 ## Core invariants
 
 1. **Source files remain the facts.** A baseline is a compiled, fingerprinted view, not a replacement.

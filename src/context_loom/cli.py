@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,9 @@ from .planning import build_plan
 from .state import load_or_create
 from .agents import CodexHost
 from .orchestrator import run
+from .config import resolve_root
+from .testing_setup import setup_test_points
+from .testing_points import TestPointAdapter
 
 
 def _workflow(path: str) -> tuple[Path, dict[str, Any]]:
@@ -39,12 +43,23 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="context-loom", description="Focused AI workflow control plane")
     sub = parser.add_subparsers(dest="command", required=True)
     init = sub.add_parser("init")
     init.add_argument("directory")
     init.add_argument("--workflow-id", default="demo")
     init.set_defaults(fn=_cmd_init)
+    setup = sub.add_parser("setup-testing", help="Create a separate RSU test-point pilot from existing preanalysis")
+    setup.add_argument("--module", required=True)
+    setup.add_argument("--output", required=True)
+    setup.add_argument("--rsu", nargs="+", required=True)
+    setup.set_defaults(fn=lambda args: _cmd_setup_testing(args))
+    doctor = sub.add_parser("doctor", help="Validate sources and optional Codex CLI without model calls or writes")
+    doctor.add_argument("directory")
+    doctor.add_argument("--offline", action="store_true", help="Skip the optional Codex CLI capability check")
+    doctor.set_defaults(fn=lambda args: _cmd_doctor(args))
     for name in ("compile", "plan", "prepare-next", "assemble", "status"):
         command = sub.add_parser(name)
         command.add_argument("directory")
@@ -73,7 +88,11 @@ def _run(command: str, directory_arg: str, result_path: str | None = None) -> in
     directory, config = _workflow(directory_arg)
     if command == "compile":
         baseline = compile_baseline(directory, config)
-        print(json.dumps(baseline.to_dict(), ensure_ascii=False, indent=2))
+        print(json.dumps({"baseline_id": baseline.baseline_id,
+                          "source_fingerprint": baseline.source_fingerprint,
+                          "sources": len(baseline.sources),
+                          "file": str(directory / ".context-loom" / "baseline.json")},
+                         ensure_ascii=False, indent=2))
         return 0
     baseline = read_json(directory / ".context-loom" / "baseline.json")
     if command == "plan":
@@ -98,7 +117,44 @@ def _run(command: str, directory_arg: str, result_path: str | None = None) -> in
 
 def _run_agent(args: argparse.Namespace) -> int:
     directory, config = _workflow(args.directory)
-    print(run(directory, config, CodexHost(directory, binary=args.binary, timeout=args.timeout)))
+    adapter = TestPointAdapter() if config.get("domain") == "testing-test-points" else None
+    if config.get("domain") not in (None, "testing-test-points"):
+        raise ValueError(f"unsupported workflow domain: {config['domain']}")
+    _check_sources(directory, config)
+    print(run(directory, config, CodexHost(directory, binary=args.binary, timeout=args.timeout), adapter))
+    return 0
+
+
+def _cmd_setup_testing(args: argparse.Namespace) -> int:
+    print(setup_test_points(Path(args.module), Path(args.output), args.rsu))
+    return 0
+
+
+def _check_sources(directory: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
+    root = resolve_root(directory, config)
+    items = []
+    for entry in (config.get("sources") or []) + (config.get("contexts") or []):
+        relative = str(entry.get("path", ""))
+        path = (root / relative).resolve()
+        if not relative or not path.is_relative_to(root) or not path.is_file():
+            raise ValueError(f"missing or out-of-bounds source: {relative}")
+        items.append({"id": entry.get("source_id", entry.get("context_id")),
+                      "bytes": path.stat().st_size, "path": relative})
+    if not any(source.get("source_id") for source in config.get("sources", [])):
+        raise ValueError("at least one authoritative source is required")
+    return items
+
+
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    directory, config = _workflow(args.directory)
+    items = _check_sources(directory, config)
+    if not args.offline:
+        CodexHost(directory)  # Capability check only: does not make a model call.
+    print(json.dumps({"status": "ready", "workflow_id": config["workflow_id"],
+                      "task_count": len(config.get("tasks", [])), "sources": items,
+                      "codex_cli": "not_checked" if args.offline else "supports_exec_fork",
+                      "note": "Model authentication and output quality are not checked; run incurs model costs."},
+                     ensure_ascii=False, indent=2))
     return 0
 
 
