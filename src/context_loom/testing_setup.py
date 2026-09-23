@@ -40,7 +40,9 @@ def setup_test_points(module_dir: Path, output_dir: Path, rsu_ids: list[str]) ->
         if rsu_id not in rows:
             raise ValueError(f"RSU not found in the original mapping: {rsu_id}")
         row = rows[rsu_id]
-        if row[3] != "SRC-MOD" or row[2] not in requirement or row[7] != "captured":
+        if (row[3] != "SRC-MOD" or
+                re.sub(r"\s+", "", row[2]) not in re.sub(r"\s+", "", requirement) or
+                row[7] != "captured"):
             raise ValueError(f"RSU lacks a captured, literal module requirement: {rsu_id}")
         selected.append(row)
     module_rel = module_dir.relative_to(project)
@@ -85,6 +87,8 @@ def setup_test_points(module_dir: Path, output_dir: Path, rsu_ids: list[str]) ->
                     "content 必须是 JSON 字符串，内容结构为 {\"points\":[{\"title\":\"...\","
                     "\"observable_result\":\"...\",\"source_quote\":\"原文完整引述\"}]}。"
                     "每条 source_quote 使用本任务 requirement_quote 原文；不得编造缺失业务规则。"
+                    "若原文只是跳转或动作入口并写有‘详见后续章节’，只验证当前列表的入口与去向，"
+                    "不要把目标模块的业务提交、接口绕行或跨模块处理扩展为本模块测试点。"
                 ),
             },
         })

@@ -65,11 +65,9 @@ def _units(directory: Path, config: dict[str, Any], host: AgentHost, baseline_th
         if data.get("range_sha256") != sha256_json(source_ranges(directory, config)):
             raise ValueError("discovery source ranges changed")
         # Validate stored decisions exactly as fresh decisions, including source quote provenance.
-        from .discovery import validate_discovery
-        units = validate_discovery(data, source_ranges(directory, config), config["task_discovery"].get("id_prefix", "TASK"))
-        if units != data["units"]:
-            raise ValueError("stored discovery units were altered")
-        return units
+        from .discovery import validate_stored_discovery
+        return validate_stored_discovery(data, source_ranges(directory, config),
+                                         config["task_discovery"].get("id_prefix", "TASK"))
     return discover_units(directory, config, host, baseline_thread)
 
 

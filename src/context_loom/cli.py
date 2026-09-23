@@ -18,6 +18,8 @@ from .orchestrator import run
 from .config import resolve_root
 from .testing_setup import setup_test_points
 from .testing_points import TestPointAdapter
+from .testing_cases import TestCaseAdapter
+from .testing_full import setup_full, run_full
 
 
 def _workflow(path: str) -> tuple[Path, dict[str, Any]]:
@@ -56,6 +58,16 @@ def main(argv: list[str] | None = None) -> int:
     setup.add_argument("--output", required=True)
     setup.add_argument("--rsu", nargs="+", required=True)
     setup.set_defaults(fn=lambda args: _cmd_setup_testing(args))
+    full_setup = sub.add_parser("setup-testing-full", help="Snapshot a source module into a separate end-to-end trial")
+    full_setup.add_argument("--module", required=True)
+    full_setup.add_argument("--output", required=True)
+    full_setup.set_defaults(fn=lambda args: print(setup_full(Path(args.module), Path(args.output))) or 0)
+    full_run = sub.add_parser("run-testing-full", help="Resume fresh RSU discovery, all test points and all cases")
+    full_run.add_argument("directory")
+    full_run.add_argument("--binary", default="codex")
+    full_run.add_argument("--timeout", type=int, default=1800)
+    full_run.set_defaults(fn=lambda args: print(run_full(Path(args.directory),
+        lambda path: CodexHost(path, binary=args.binary, timeout=args.timeout))) or 0)
     doctor = sub.add_parser("doctor", help="Validate sources and optional Codex CLI without model calls or writes")
     doctor.add_argument("directory")
     doctor.add_argument("--offline", action="store_true", help="Skip the optional Codex CLI capability check")
@@ -117,8 +129,9 @@ def _run(command: str, directory_arg: str, result_path: str | None = None) -> in
 
 def _run_agent(args: argparse.Namespace) -> int:
     directory, config = _workflow(args.directory)
-    adapter = TestPointAdapter() if config.get("domain") == "testing-test-points" else None
-    if config.get("domain") not in (None, "testing-test-points"):
+    adapters = {"testing-test-points": TestPointAdapter, "testing-test-cases": TestCaseAdapter}
+    adapter = adapters[config["domain"]]() if config.get("domain") in adapters else None
+    if config.get("domain") not in (None, *adapters):
         raise ValueError(f"unsupported workflow domain: {config['domain']}")
     _check_sources(directory, config)
     print(run(directory, config, CodexHost(directory, binary=args.binary, timeout=args.timeout), adapter))

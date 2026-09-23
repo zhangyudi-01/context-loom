@@ -121,6 +121,9 @@ See [the minimal example](examples/minimal-workflow/README.md) for a complete lo
 For a read-only trial on an existing software-testing module, see the
 [isolated testing pilot](docs/quickstart-testing-pilot.md). `$loom-test-points` guides setup,
 preflight and the optional paid run; it does not overwrite the original module's artifacts.
+For a fresh end-to-end trial that rediscovers RSUs, generates every test point and then
+generates cases in an independent output directory, see
+[the full testing trial](docs/quickstart-testing-full.md) and `$loom-testing-full`.
 
 ## Core invariants
 
@@ -144,6 +147,7 @@ The generic control plane and initial Codex CLI host implement:
 - deterministic Markdown assembly and traceability JSON;
 - initial Context Loom and software-testing Skill guidance (not a full migration of the original project's runners);
 - programmatic domain validation and artifact-finalization hooks;
+- an isolated, resumable testing-domain full-flow trial (not the production testing runner);
 - portable JSON schemas and a runnable example.
 
 Claude and presentation-specific adapters, concurrent batch execution, and a full production
