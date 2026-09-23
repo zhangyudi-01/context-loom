@@ -11,6 +11,8 @@ A reusable AI workflow framework for shared-context reasoning, complexity-aware 
 > Focus on one task.  
 > Verify and merge.
 
+![Context Loom skill card: skills for focused, high-quality AI work](docs/assets/context-loom-skill-card.svg)
+
 Context Loom turns long, context-heavy AI work into bounded, verifiable units without making
 every worker rediscover the project from scratch. It compiles shared sources into a fingerprinted
 baseline, routes work by complexity, prepares focused worker packets, validates structured
@@ -24,26 +26,10 @@ It is not one giant prompt and it is not tied to a single model. The framework s
 
 ## The workflow
 
-```text
-Shared sources
-      │
-      ▼
-Understand once ──► Fingerprinted baseline
-                          │
-                          ▼
-                    Route by complexity
-                    ┌───────────────┐
-                    │               │
-                    ▼               ▼
-             Simple task batch   Dedicated fork
-                    │               │
-                    └───────┬───────┘
-                            ▼
-                    Validate each result
-                            │
-                            ▼
-                 Deterministic traceable assembly
-```
+![Context Loom core workflow: shared sources, fingerprinted baseline, complexity routing, focused execution plans, validation, and assembly](docs/assets/context-loom-core-workflow.svg)
+
+The current core prepares a simple-batch or dedicated-fork **plan and worker packets**. Launching
+agent sessions and actual forks belongs to an adapter; it is not yet part of the `0.1.0` CLI.
 
 ## Repository layout
 
@@ -118,4 +104,3 @@ recover, and assemble work without coupling its state machine to one CLI.
 ## License
 
 MIT
-
