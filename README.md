@@ -50,6 +50,39 @@ tests/                          Runtime and end-to-end verification
 
 ## Quick start
 
+### Install the Skills
+
+In your own interactive terminal, install the workflow Skills with the same `skills` installer
+used by other Skills repositories:
+
+```powershell
+npx skills@latest add zhangyudi-01/context-loom
+```
+
+The installer discovers the Skills in this repository and, when running interactively,
+lets you select which Skills and agent integrations to install. For example, choose
+`loom-test-points` for an isolated test-point pilot; `context-loom` and
+`setup-context-loom` are the framework entry points. The menu and its visual style belong
+to the external `skills` installer, not to this repository. Agent-hosted or CI terminals
+may be treated as non-interactive and install all discovered Skills instead. To select
+exactly one Skill without a menu, use:
+
+```powershell
+npx skills@latest add zhangyudi-01/context-loom --skill loom-test-points --agent codex --global --yes
+```
+
+Installing Skills provides agent instructions **only**; it does not install the Python
+`context-loom` runtime. Install the runtime separately before using its commands:
+
+```powershell
+python -m pip install "git+https://github.com/zhangyudi-01/context-loom.git"
+context-loom --help
+```
+
+If you are developing the framework locally, use the editable checkout below instead.
+
+### Run the framework locally
+
 ```powershell
 git clone https://github.com/zhangyudi-01/context-loom.git
 cd context-loom
