@@ -4,7 +4,7 @@ The `loom-test-points` Skill is the conversational entry point. The Python runti
 separately; installing Skill instructions does not install the CLI.
 
 ```powershell
-npx skills@latest add zhangyudi-01/context-loom
+npx skills@latest add zhangyudi-01/context-loom --skill loom-test-points --agent codex --global --yes
 python -m pip install -e D:\pythonProject\context-loom
 ```
 
