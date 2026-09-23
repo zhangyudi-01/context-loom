@@ -17,14 +17,16 @@ def compile_baseline(workflow_dir: Path, config: dict[str, Any]) -> Baseline:
     if not isinstance(raw_sources, list) or not raw_sources:
         raise ValueError("at least one source is required")
     refs: list[SourceRef] = []
+    seen: set[str] = set()
     sections: list[str] = []
     for raw in raw_sources:
         if not isinstance(raw, dict):
             raise ValueError("each source must be an object")
         source_id = str(raw.get("source_id", "")).strip()
         relative = str(raw.get("path", "")).strip()
-        if not source_id or not relative:
+        if not source_id or not relative or source_id in seen:
             raise ValueError("each source needs source_id and path")
+        seen.add(source_id)
         path = (root / relative).resolve()
         if root not in path.parents and path != root:
             raise ValueError(f"source escapes workflow root: {relative}")
@@ -54,3 +56,23 @@ def compile_baseline(workflow_dir: Path, config: dict[str, Any]) -> Baseline:
     save(workflow_dir, state)
     return baseline
 
+
+def assert_baseline_current(workflow_dir: Path, config: dict[str, Any], baseline: dict[str, Any]) -> None:
+    """Fail closed on any authoritative-source change before reusing a session or a plan."""
+    root = resolve_root(workflow_dir, config)
+    sources = config.get("sources") or config.get("baseline", {}).get("sources") or []
+    old = baseline.get("sources", [])
+    if len(old) != len(sources):
+        raise ValueError("baseline source list changed; start a new workflow")
+    if baseline.get("source_fingerprint") != sha256_json(old):
+        raise ValueError("baseline fingerprint is invalid")
+    for raw, recorded in zip(sources, old):
+        relative = raw.get("path", "")
+        path = (root / relative).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            raise ValueError(f"baseline source is missing or out of bounds: {relative}")
+        if (recorded["source_id"] != raw.get("source_id") or
+                recorded["path"] != relative or
+                recorded["role"] != raw.get("role", "source") or
+                recorded["sha256"] != sha256_file(path)):
+            raise ValueError(f"baseline source drift: {relative}; start a new workflow")

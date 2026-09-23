@@ -1,7 +1,10 @@
 # Agent adapters
 
-The core runtime does not invoke Codex, Claude, or another agent process. An adapter reads the
-next packet, invokes the host, and writes one structured result per Task Unit. It must preserve
-`baseline_sha256`, `packet_sha256`, and `task_id` exactly. Agent conversation logs are optional
-audit evidence and never replace workflow state.
-
+The `AgentHost` interface (`start`, `fork`, `resume`) separates generic orchestration from vendor
+sessions. `CodexHost` is an implemented read-only CLI adapter: `context-loom run WORKFLOW_DIR`
+creates one baseline session; discovery and routing fork from it; each batch independently forks
+from the baseline. Simple members then use `resume` on that batch's child. No sibling batch
+inherits another batch's history. An adapter must return a real child session ID on `fork` and
+must preserve the same ID on `resume`. The parent validates each result and persists a JSON ledger.
+Agent conversation logs are never used to schedule or resume work. Other hosts can implement the
+same interface; Claude integration is not implemented yet. Automatic compaction is not required.

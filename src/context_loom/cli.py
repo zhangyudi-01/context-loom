@@ -8,10 +8,12 @@ from typing import Any
 from .assembly import assemble
 from .baseline import compile_baseline
 from .config import load_config
-from .execution import prepare_next, submit_result
+from .execution import prepare_next, submit_result, retry_failed
 from .io import read_json, write_json_atomic
 from .planning import build_plan
 from .state import load_or_create
+from .agents import CodexHost
+from .orchestrator import run
 
 
 def _workflow(path: str) -> tuple[Path, dict[str, Any]]:
@@ -51,6 +53,15 @@ def main(argv: list[str] | None = None) -> int:
     submit.add_argument("directory")
     submit.add_argument("--result", required=True)
     submit.set_defaults(fn=lambda args: _run("submit", args.directory, args.result))
+    automatic = sub.add_parser("run", help="Run the full AI workflow with real baseline forks (may incur model costs)")
+    automatic.add_argument("directory")
+    automatic.add_argument("--binary", default="codex")
+    automatic.add_argument("--timeout", type=int, default=1800)
+    automatic.set_defaults(fn=lambda args: _run_agent(args))
+    retry = sub.add_parser("retry-failed", help="Explicitly requeue a failed task, preserving the failed attempt")
+    retry.add_argument("directory")
+    retry.add_argument("--task-id", required=True)
+    retry.set_defaults(fn=lambda args: _run_retry(args))
     args = parser.parse_args(argv)
     try:
         return args.fn(args)
@@ -85,6 +96,18 @@ def _run(command: str, directory_arg: str, result_path: str | None = None) -> in
     return 0
 
 
+def _run_agent(args: argparse.Namespace) -> int:
+    directory, config = _workflow(args.directory)
+    print(run(directory, config, CodexHost(directory, binary=args.binary, timeout=args.timeout)))
+    return 0
+
+
+def _run_retry(args: argparse.Namespace) -> int:
+    directory, config = _workflow(args.directory)
+    retry_failed(directory, config, args.task_id)
+    print(f"requeued {args.task_id}")
+    return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
-

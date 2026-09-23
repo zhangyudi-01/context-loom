@@ -1,0 +1,18 @@
+{
+  "schema_version": "context-loom/workflow-v1",
+  "workflow_id": "example-testing-rsu",
+  "root": ".",
+  "sources": [
+    {"source_id": "GLOBAL", "path": "global.md", "role": "context"},
+    {"source_id": "MODULE", "path": "module.md", "role": "requirement"}
+  ],
+  "task_discovery": {
+    "source_ids": ["MODULE"],
+    "id_prefix": "RSU",
+    "guidance": "One RSU is a complete testable requirement contract. Preserve literal requirement quotes; exclude headings only with reasons."
+  },
+  "contexts": [
+    {"context_id": "DATA-CLOSURE", "path": "data-closure.md"}
+  ],
+  "policy": {"max_simple_batch_size": 5}
+}

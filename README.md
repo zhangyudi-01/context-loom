@@ -28,8 +28,12 @@ It is not one giant prompt and it is not tied to a single model. The framework s
 
 ![Context Loom core workflow: shared sources, fingerprinted baseline, complexity routing, focused execution plans, validation, and assembly](docs/assets/context-loom-core-workflow.svg)
 
-The current core prepares a simple-batch or dedicated-fork **plan and worker packets**. Launching
-agent sessions and actual forks belongs to an adapter; it is not yet part of the `0.1.0` CLI.
+Two modes are available: a manual control plane (`compile → plan → prepare-next → submit → assemble`)
+and `run`, which creates a real shared Codex session, discovers source-backed task units when
+configured, asks AI to evaluate **every** unit's complexity, then forks independent batches.
+Simple units in the same batch run sequentially in one child session; complex units fork alone.
+The parent validates each result before committing it and assembles in declared order. This
+agent-driven mode uses model tokens; tests use a fake host and incur no model charges.
 
 ## Repository layout
 
@@ -65,32 +69,49 @@ context-loom assemble .\demo
 context-loom status .\demo
 ```
 
+For an automated run (requires a compatible Codex CLI and may incur model costs):
+
+```powershell
+context-loom run .\demo
+context-loom status .\demo
+```
+
+To derive task units instead of listing them manually, set `task_discovery` with `source_ids`
+and `id_prefix` in the workflow configuration; discovery requires source quotations and complete
+range coverage. On failure, inspect `status`, then explicitly requeue with
+`context-loom retry-failed .\demo --task-id TASK-001` before rerunning. Input files and routing
+cannot drift during recovery. See [agent adapters](docs/agent-adapters.md) and
+[the lifecycle](docs/workflow-lifecycle.md) for boundaries.
+
 See [the minimal example](examples/minimal-workflow/README.md) for a complete local run.
 
 ## Core invariants
 
 1. **Source files remain the facts.** A baseline is a compiled, fingerprinted view, not a replacement.
 2. **Every task is bounded.** A worker receives the shared baseline plus only its authorized task scope.
-3. **Complexity changes topology.** Compatible simple tasks may share a batch; complex tasks receive a dedicated fork plan.
+3. **Complexity changes topology.** Compatible simple tasks share a child session; complex tasks receive their own fork.
 4. **Sibling history is not evidence.** One task cannot depend on another worker's conversation or tool trace unless declared.
 5. **State is explicit.** JSON state and file hashes control recovery; logs are audit evidence, not scheduling input.
 6. **AI reasons locally; code assembles globally.** Accepted results are ordered and merged deterministically.
 
 ## Current status
 
-Version `0.1.0` implements the model-independent control plane:
+The generic control plane and initial Codex CLI host implement:
 
 - baseline source resolution and SHA-256 fingerprints;
-- stable simple-batch and dedicated-fork planning;
+- optional source-faithful AI discovery and exhaustive AI complexity routing;
+- real shared-baseline sessions and sibling-isolated Codex forks with bounded simple batches;
 - atomic workflow state;
 - focused packet generation;
 - structured result submission and scope validation;
 - deterministic Markdown assembly and traceability JSON;
-- initial Context Loom and software-testing Skills;
+- initial Context Loom and software-testing Skill guidance (not a full migration of the original project's runners);
+- programmatic domain validation and artifact-finalization hooks;
 - portable JSON schemas and a runnable example.
 
-Direct Codex/Claude process invocation is adapter work. The core can already prepare, validate,
-recover, and assemble work without coupling its state machine to one CLI.
+Claude and presentation-specific adapters, concurrent batch execution, and a full production
+migration of the original testing Skills are **not** implemented. The Codex adapter is read-only;
+the runtime runs batches sequentially by default and does not depend on automatic compaction.
 
 ## Documentation
 

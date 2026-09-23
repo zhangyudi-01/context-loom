@@ -11,6 +11,7 @@
     "baseline_id": {"type": "string", "minLength": 1},
     "baseline_sha256": {"type": "string", "minLength": 1},
     "tasks": {"type": "array", "minItems": 1},
+    "dynamic_context": {"type": "array", "items": {"type": "object", "required": ["context_id", "path", "sha256", "content"]}},
     "instructions": {"type": "string", "minLength": 1},
     "packet_sha256": {"type": "string", "minLength": 1}
   }

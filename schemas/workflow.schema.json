@@ -2,13 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://context-loom.dev/schemas/workflow-v1.json",
   "type": "object",
-  "required": ["schema_version", "workflow_id", "sources", "tasks"],
+  "required": ["schema_version", "workflow_id", "sources"],
+  "oneOf": [{"required": ["tasks"]}, {"required": ["task_discovery"]}],
   "properties": {
     "schema_version": {"const": "context-loom/workflow-v1"},
     "workflow_id": {"type": "string", "minLength": 1},
     "root": {"type": "string"},
     "sources": {"type": "array", "minItems": 1},
-    "tasks": {"type": "array", "minItems": 1}
+    "tasks": {"type": "array", "minItems": 1},
+    "task_discovery": {"type": "object", "properties": {
+      "source_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+      "id_prefix": {"type": "string"}, "guidance": {"type": "string"}
+    }},
+    "contexts": {"type": "array", "items": {"type": "object", "required": ["context_id", "path"],
+      "properties": {"context_id": {"type": "string"}, "path": {"type": "string"}}}}
   }
 }
-

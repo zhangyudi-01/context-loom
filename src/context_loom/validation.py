@@ -26,4 +26,7 @@ def validate_worker_result(
         raise ValueError("worker result status must be completed or failed")
     if not isinstance(result["content"], str):
         raise ValueError("worker result content must be a string")
-
+    if result["status"] == "completed" and not result["content"].strip():
+        raise ValueError("completed worker result must have content")
+    if "trace" in result and not isinstance(result["trace"], dict):
+        raise ValueError("worker trace must be an object")

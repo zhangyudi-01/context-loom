@@ -25,13 +25,20 @@ def build_plan(workflow_dir: Path, config: dict[str, Any], baseline: dict[str, A
     simple_buffer: list[dict[str, Any]] = []
     simple_signature: tuple[tuple[str, ...], tuple[str, ...]] | None = None
     batches: list[dict[str, Any]] = []
+    batch_size = config.get("policy", {}).get("max_simple_batch_size", 5)
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int) or not 1 <= batch_size <= 20:
+        raise ValueError("max_simple_batch_size must be an integer from 1 to 20")
+    valid_sources = {source["source_id"] for source in baseline["sources"]}
+    valid_contexts = {item["context_id"] for item in config.get("contexts", [])}
+    if len(valid_contexts) != len(config.get("contexts", [])):
+        raise ValueError("duplicate dynamic context ID")
 
     def flush_simple() -> None:
         nonlocal simple_buffer, simple_signature
         if not simple_buffer:
             return
-        for start in range(0, len(simple_buffer), 10):
-            members = simple_buffer[start:start + 10]
+        for start in range(0, len(simple_buffer), batch_size):
+            members = simple_buffer[start:start + batch_size]
             batches.append({
                 "batch_id": f"BATCH-{len(batches) + 1:03d}",
                 "mode": "simple",
@@ -53,6 +60,10 @@ def build_plan(workflow_dir: Path, config: dict[str, Any], baseline: dict[str, A
             raise ValueError(f"unsupported complexity for {task_id}: {complexity}")
         source_refs = _string_refs(raw.get("source_refs"), "source_refs", task_id)
         context_refs = _string_refs(raw.get("context_refs"), "context_refs", task_id)
+        if set(source_refs) - valid_sources:
+            raise ValueError(f"{task_id} references an unknown source")
+        if set(context_refs) - valid_contexts - valid_sources:
+            raise ValueError(f"{task_id} references an unknown context")
         payload = raw.get("payload", {})
         if not isinstance(payload, dict):
             raise ValueError(f"payload for {task_id} must be an object")
@@ -64,6 +75,7 @@ def build_plan(workflow_dir: Path, config: dict[str, Any], baseline: dict[str, A
             "source_refs": source_refs,
             "context_refs": context_refs,
             "payload": payload,
+            "rationale": str(raw.get("rationale", "manual classification")),
         }
         normalized.append(item)
         if complexity == "complex":

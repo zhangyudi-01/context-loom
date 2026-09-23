@@ -9,4 +9,7 @@ Use Context Loom for shared baseline, batch/fork routing, state and assembly. Ke
 semantics here: preconditions, concrete actions, numbered expected results, SQL asset policy,
 and TP-to-TC traceability. Default to one test case per final test point; split only when the
 testing intent has independent risk, setup, action, expected result, and regression value.
-
+Put validated TPs in the source baseline and scoped variable data / SQL assets in `contexts`.
+The domain adapter should reject placeholder actions, scenario references without concrete
+setup, gratuitous SQL, and unverifiable expected results; the generic core knows none of these
+testing rules. This guide does not replace the existing production test-case runner.
