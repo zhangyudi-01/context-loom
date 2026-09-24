@@ -35,6 +35,11 @@ Simple units in the same batch run sequentially in one child session; complex un
 The parent validates each result before committing it and assembles in declared order. This
 agent-driven mode uses model tokens; tests use a fake host and incur no model charges.
 
+After a run, use `context-loom audit WORKFLOW_DIR` to inspect actual start/fork/resume
+attempts and failures. For a full testing trial, pass its top-level directory to aggregate
+the preanalysis, test-point, and test-case stages. Invocation evidence is append-only and
+does not control recovery; details are in [workflow lifecycle](docs/workflow-lifecycle.md).
+
 ## Repository layout
 
 ```text

@@ -14,6 +14,7 @@ from .io import read_json, write_json_atomic
 from .planning import build_plan
 from .state import load_or_create
 from .agents import CodexHost
+from .audit import summarize_workflow
 from .orchestrator import run
 from .config import resolve_root
 from .testing_setup import setup_test_points
@@ -72,6 +73,10 @@ def main(argv: list[str] | None = None) -> int:
     doctor.add_argument("directory")
     doctor.add_argument("--offline", action="store_true", help="Skip the optional Codex CLI capability check")
     doctor.set_defaults(fn=lambda args: _cmd_doctor(args))
+    audit = sub.add_parser("audit", help="Summarize actual agent invocations, retries, and interrupted calls")
+    audit.add_argument("directory")
+    audit.set_defaults(fn=lambda args: print(json.dumps(summarize_workflow(Path(args.directory).resolve()),
+                                                       ensure_ascii=False, indent=2)) or 0)
     for name in ("compile", "plan", "prepare-next", "assemble", "status"):
         command = sub.add_parser(name)
         command.add_argument("directory")

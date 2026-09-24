@@ -15,6 +15,8 @@ from context_loom.state import load_or_create
 from context_loom.execution import retry_failed
 from context_loom.assembly import assemble
 from context_loom.io import read_json
+from context_loom.audit import AUDIT_NAME, InvocationAudit, summarize, summarize_workflow
+from context_loom.cli import main
 
 
 class FakeHost:
@@ -94,15 +96,27 @@ def test_batches_share_only_their_own_fork_and_merge_in_order(tmp_path: Path) ->
     assert fake.calls[3][1] == fake.calls[2][2]  # simple second task resumes same child
     assert fake.calls[4][1] == fake.calls[0][2]  # complex fork from baseline, not simple child
     assert load_or_create(tmp_path, "example")["assembly"]["status"] == "validated"
+    audit = summarize(tmp_path)
+    assert audit["counts"] == {"start": 1, "completed": 5, "fork": 3, "resume": 1}
+    assert audit["by_stage"]["worker"] == {"fork": 2, "completed": 3, "resume": 1}
+    records = [json.loads(row) for row in (tmp_path / AUDIT_NAME).read_text(encoding="utf-8").splitlines()]
+    worker = [row for row in records if row["stage"] == "worker" and row["event"] == "completed"]
+    assert [row["task_id"] for row in worker] == ["TASK-001", "TASK-002", "TASK-003"]
+    assert worker[1]["operation"] == "resume" and worker[1]["parent_thread_id"] == worker[0]["thread_id"]
+    assert worker[0]["batch_id"] == worker[1]["batch_id"]
+    assert worker[2]["batch_id"] != worker[1]["batch_id"]
+    assert all("prompt" not in row and "stderr" not in row for row in records)
     other = FakeHost()
     run(tmp_path, config, other)
     assert other.calls == []  # idempotent resume doesn't start or fork extra sessions
+    assert summarize(tmp_path)["invocations"] == 5
 
 
 def test_discovery_quotes_are_original_and_coverage_is_complete(tmp_path: Path) -> None:
     config = fixture(tmp_path, discovery=True)
     fake = FakeHost()
     run(tmp_path, config, fake)
+    assert summarize(tmp_path)["by_stage"]["discovery"] == {"fork": 1, "completed": 1}
     assert (tmp_path / ".context-loom" / "discovery.json").is_file()
     assert "RSU-001" in (tmp_path / ".context-loom" / "assembled.md").read_text(encoding="utf-8")
     ranges = [{"range_id": "SPEC:001", "source_id": "SPEC", "text": "Required exact text"}]
@@ -156,6 +170,57 @@ def test_source_drift_fails_before_reusing_session(tmp_path: Path) -> None:
         run(tmp_path, config, fake)
 
 
+def test_audit_counts_failed_turn_and_recovery_across_runs(tmp_path: Path, capsys) -> None:
+    config = fixture(tmp_path)
+    host = FakeHost(interrupt_at="TASK-002")
+    with pytest.raises(RuntimeError, match="simulated worker crash"):
+        run(tmp_path, config, host)
+    first = summarize(tmp_path)
+    assert first["counts"]["failed"] == 1
+    assert first["incomplete"][0]["task_id"] == "TASK-002"
+    assert first["incomplete"][0]["operation"] == "resume"
+    assert first["incomplete"][0]["error_type"] == "RuntimeError"
+    run(tmp_path, config, host)
+    second = summarize(tmp_path)
+    assert second["counts"]["failed"] == 1
+    assert second["counts"]["fork"] == 4  # retry starts a fresh child
+    lines = [json.loads(line) for line in (tmp_path / AUDIT_NAME).read_text(encoding="utf-8").splitlines()]
+    assert len({item["run_id"] for item in lines}) == 2
+    assert main(["audit", str(tmp_path)]) == 0
+    assert json.loads(capsys.readouterr().out)["counts"] == second["counts"]
+
+
+def test_audit_distinguishes_interrupted_start_and_missing_history(tmp_path: Path) -> None:
+    assert summarize(tmp_path)["recorded"] is False
+    audit = InvocationAudit(tmp_path, "sample")
+    audit._append({"invocation_id": "one", "event": "started", "run_id": audit.run_id,
+                   "stage": "worker", "operation": "fork", "batch_id": "B-1", "task_id": "T-1"})
+    report = summarize(tmp_path)
+    assert report["counts"] == {"fork": 1, "interrupted": 1}
+    assert report["incomplete"][0]["status"] == "interrupted"
+
+
+def test_audit_aggregates_three_phase_trial_with_partial_history(tmp_path: Path, capsys) -> None:
+    (tmp_path / "preanalysis").mkdir()
+    (tmp_path / "test-points").mkdir()
+    (tmp_path / "test-cases").mkdir()
+    audit = InvocationAudit(tmp_path / "test-points", "points")
+
+    class MeasuredHost:
+        def start(self, prompt):
+            return AgentTurn("baseline", "done", 2, {"input_tokens": 110, "cached_input_tokens": 30})
+
+    audit.scope(MeasuredHost(), "baseline").start("secret source text")
+    assert main(["audit", str(tmp_path)]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["counts"] == {"start": 1, "completed": 1}
+    assert report["usage"] == {"input_tokens": 110, "cached_input_tokens": 30}
+    assert report["phases"]["preanalysis"]["recorded"] is False
+    assert report["phases"]["test-points"]["recorded"] is True
+    assert report["phases"]["test-cases"]["recorded"] is False
+    assert "secret source text" not in (tmp_path / "test-points" / AUDIT_NAME).read_text(encoding="utf-8")
+
+
 def test_invalid_worker_hash_never_commits_and_resumes_in_new_fork(tmp_path: Path) -> None:
     config = fixture(tmp_path)
     host = FakeHost(bad_hash=True)
@@ -195,13 +260,18 @@ def test_codex_host_builds_real_fork_resume_commands_without_invoking_model(monk
         output_path.write_text('{"ok":true}', encoding="utf-8")
         thread = "baseline" if "fork" not in command and "resume" not in command else (
             "child" if "fork" in command else "child")
-        return SimpleNamespace(returncode=0, stdout=json.dumps({"type": "thread.started", "thread_id": thread}), stderr="")
+        return SimpleNamespace(returncode=0, stdout="\n".join([
+            json.dumps({"type": "thread.started", "thread_id": thread}),
+            json.dumps({"type": "turn.completed", "usage": {"input_tokens": 50,
+                        "cached_input_tokens": 20, "output_tokens": 10}})]), stderr="")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     monkeypatch.setattr("context_loom.agents.shutil.which", lambda _: "codex")
     host = CodexHost(tmp_path)
     assert host.start("hello").thread_id == "baseline"
-    assert host.fork("baseline", "task").thread_id == "child"
+    forked = host.fork("baseline", "task")
+    assert forked.thread_id == "child"
+    assert forked.usage == {"input_tokens": 50, "cached_input_tokens": 20, "output_tokens": 10}
     assert host.resume("child", "next").thread_id == "child"
     assert ["fork", "baseline", "-"] == commands[-2][-3:]
     assert ["resume", "child", "-"] == commands[-1][-3:]

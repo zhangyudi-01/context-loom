@@ -16,6 +16,7 @@ class AgentTurn:
     thread_id: str
     text: str
     tool_calls: int = 0
+    usage: dict[str, int] | None = None
 
 
 class AgentHost(Protocol):
@@ -76,6 +77,7 @@ class CodexHost:
                 raise ValueError(f"agent failed ({completed.returncode}): {completed.stderr[-1200:]}")
             thread_id = ""
             tool_calls = 0
+            usage: dict[str, int] | None = None
             for line in completed.stdout.splitlines():
                 try:
                     event = json.loads(line)
@@ -90,8 +92,12 @@ class CodexHost:
                     tool_calls += int(event["item"].get("type") in {
                         "command_execution", "mcp_tool_call", "web_search", "file_change", "computer_action"
                     })
+                if event.get("type") == "turn.completed" and isinstance(event.get("usage"), dict):
+                    usage = {key: value for key, value in event["usage"].items()
+                             if key in {"input_tokens", "cached_input_tokens", "output_tokens"}
+                             and isinstance(value, int) and not isinstance(value, bool) and value >= 0}
             if not thread_id or (parent and thread_id == parent) or (resume and thread_id != resume):
                 raise ValueError("agent returned an invalid session identity")
             if not last_message.is_file():
                 raise ValueError("agent did not produce a final response")
-            return AgentTurn(thread_id, last_message.read_text(encoding="utf-8"), tool_calls)
+            return AgentTurn(thread_id, last_message.read_text(encoding="utf-8"), tool_calls, usage)

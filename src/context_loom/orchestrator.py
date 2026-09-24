@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .agents import AgentHost
+from .audit import InvocationAudit
 from .assembly import assemble
 from .baseline import assert_baseline_current, compile_baseline
 from .discovery import discover_units, source_ranges
@@ -156,12 +157,14 @@ def run(directory: Path, config: dict[str, Any], host: AgentHost, adapter: Domai
     """Resume from an explicit ledger; no historical log scanning or automatic compaction."""
     directory = directory.resolve()
     adapter = adapter or MarkdownAdapter()
+    audit = InvocationAudit(directory, str(config["workflow_id"]))
     baseline_file = directory / ".context-loom" / "baseline.json"
     baseline = read_json(baseline_file) if baseline_file.exists() else compile_baseline(directory, config).to_dict()
     assert_baseline_current(directory, config, baseline)
-    baseline_thread = _baseline_session(directory, config, baseline, host)
-    units = _units(directory, config, host, baseline_thread)
-    routed_config = _route(directory, config, units, host, baseline_thread, baseline["source_fingerprint"])
+    baseline_thread = _baseline_session(directory, config, baseline, audit.scope(host, "baseline"))
+    units = _units(directory, config, audit.scope(host, "discovery"), baseline_thread)
+    routed_config = _route(directory, config, units, audit.scope(host, "routing"), baseline_thread,
+                           baseline["source_fingerprint"])
     plan_file = directory / ".context-loom" / "plan.json"
     if plan_file.exists():
         plan = read_json(plan_file)
@@ -186,7 +189,8 @@ def run(directory: Path, config: dict[str, Any], host: AgentHost, adapter: Domai
             if state["tasks"][ident]["status"] == "validated":
                 continue
             prompt = _worker_prompt(packet, task)
-            turn = host.fork(baseline_thread, prompt) if session == baseline_thread else host.resume(session, prompt)
+            worker = audit.scope(host, "worker", batch_id=packet["batch_id"], task_id=ident)
+            turn = worker.fork(baseline_thread, prompt) if session == baseline_thread else worker.resume(session, prompt)
             session = turn.thread_id
             result = _object(turn.text, f"worker {ident}")
             # Domain validation precedes commit; the parent's generic hash checks still apply.
