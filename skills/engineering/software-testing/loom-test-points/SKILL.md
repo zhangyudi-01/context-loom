@@ -9,8 +9,13 @@ Use the existing module as read-only input. This is a **pilot**, not a replaceme
 project's production test-point runner. Do not write into the source project or claim full
 module coverage from a selected subset of RSUs.
 
-1. Locate the module's `00-module-requirement-pack.md`, `01-context-pack.md`, and
-   `02-sentence-test-point-map.md`. Choose the RSU IDs requested by the user; when none are
+1. Locate the unique `preanalysis-manifest.json` in the module root or its direct children;
+   new analyses use `preanalysis/`. Resolve its artifact paths and resource roles instead of
+   assuming flat files or fixed SRC names. Without a manifest, only the legacy flat layout with
+   `global/project-context.md` is supported. The producer must first pass the requirement
+   preanalysis Skill's full validator; setup rechecks selected RSU provenance and dependencies,
+   not complete semantic coverage. Reject pending RSUs, unresolved Qs and blocked DCs.
+   Choose the RSU IDs requested by the user; when none are
    specified, suggest one or two small, representative RSUs for a low-cost first run.
 2. Create a **new** output directory outside the source project with
    `context-loom setup-testing --module MODULE_DIR --output NEW_DIR --rsu RSU-001 RSU-002`.

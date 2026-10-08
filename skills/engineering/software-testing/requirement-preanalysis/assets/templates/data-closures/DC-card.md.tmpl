@@ -1,0 +1,74 @@
+# DC-001 {{DATA_CLOSURE_TITLE}}
+
+## 引用入口
+
+| 资源 ID | 可点击文件 | 用途 |
+|---|---|---|
+| SRC-MOD | [当前模块需求](../00-module-requirement-pack.md) | 当前业务规则 |
+| SRC-GLOBAL | [项目全局上下文]({{GLOBAL_CONTEXT_LINK}}) | 项目边界和共享术语 |
+| RSU-INDEX | [原文需求单元映射](../02-sentence-test-point-map.md) | 关联 RSU 和来源定位 |
+| Q-INDEX | [问题确认清单](../03-clarification-questions.md) | 数据契约确认结论 |
+| {{DATA_SOURCE_ID}} | [数据库或实现依据]({{DATA_SOURCE_LINK}}) | 表结构、查询或实现证据 |
+
+## 定位
+
+- 状态：`blocked`
+- 本卡保存：{{DATA_CLOSURE_SCOPE}}
+- 本卡不保存：测试点、环境相关 SQL、具体用例步骤或账号密码。
+
+## 关联范围
+
+- 关联 RSU：RSU-001
+- 关联问题：{{BLOCKING_Q_REFS}}
+- 关联功能上下文：{{RELATED_FC_REFS}}
+
+## 闭包目标
+
+{{DATA_CLOSURE_GOAL}}
+
+## 输入与输出
+
+| 方向 | 逻辑对象 | 物理载体/字段 | 约束 | 依据 |
+|---|---|---|---|---|
+| 输入 | {{INPUT_OBJECT}} | {{INPUT_FIELDS}} | {{INPUT_CONSTRAINTS}} | {{INPUT_EVIDENCE}} |
+| 输出 | {{OUTPUT_OBJECT}} | {{OUTPUT_FIELDS}} | {{OUTPUT_CONSTRAINTS}} | {{OUTPUT_EVIDENCE}} |
+
+## 关系图
+
+```mermaid
+flowchart TB
+    T1["{{TABLE_1}}"] -->|"{{JOIN_SUMMARY}}"| T2["{{TABLE_2}}"]
+```
+
+## 表角色
+
+| Table ID | 物理表 | 职责 | 访问模式 | 主键/自然键 | 关键字段 | 数据所有权 |
+|---|---|---|---|---|---|---|
+| T-001 | {{TABLE_1}} | {{TABLE_1_ROLE}} | {{TABLE_1_ACCESS}} | {{TABLE_1_KEY}} | {{TABLE_1_FIELDS}} | {{TABLE_1_OWNER}} |
+| T-002 | {{TABLE_2}} | {{TABLE_2_ROLE}} | {{TABLE_2_ACCESS}} | {{TABLE_2_KEY}} | {{TABLE_2_FIELDS}} | {{TABLE_2_OWNER}} |
+
+## 连接与过滤契约
+
+| Edge ID | From | To | Join Predicate | 基数 | 附加过滤 | 依据 |
+|---|---|---|---|---|---|---|
+| E-001 | T-001 | T-002 | {{JOIN_PREDICATE}} | {{CARDINALITY}} | {{FILTERS}} | {{JOIN_EVIDENCE}} |
+
+## 数据状态与准备契约
+
+| Profile ID | 数据状态目标 | 准备策略 | 预期推导 | 清理策略 |
+|---|---|---|---|---|
+| DP-001 | {{DATA_PROFILE}} | {{PREPARATION_STRATEGY}} | {{EXPECTED_DERIVATION}} | {{CLEANUP_STRATEGY}} |
+
+## 查询与断言契约
+
+| 用途 | 查询入口 | 断言口径 | 空结果含义 | 依据 |
+|---|---|---|---|---|
+| {{QUERY_PURPOSE}} | {{QUERY_ENTRY}} | {{ASSERTION_RULE}} | {{EMPTY_RESULT_MEANING}} | {{QUERY_EVIDENCE}} |
+
+## 清理与隔离
+
+{{CLEANUP_AND_ISOLATION}}
+
+## 当前缺口
+
+- {{CURRENT_DATA_GAP}}

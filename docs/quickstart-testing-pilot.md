@@ -11,6 +11,12 @@ python -m pip install -e D:\pythonProject\context-loom
 In Codex, invoke `$loom-test-points` with an existing preanalyzed module path and selected RSUs,
 or run the commands yourself:
 
+New preanalysis lives under `MODULE_DIR/preanalysis/` and has a `preanalysis/v1` manifest.
+Finish the [requirement-preanalysis Skill](quickstart-testing-preanalysis.md) and its full
+validation first. Setup resolves the manifest's actual artifact and fixed-resource paths;
+it also checks selected RSU wording and the readiness of direct Q/FC/DC dependencies.
+Legacy flat inputs without a manifest still require `global/project-context.md`.
+
 ```powershell
 context-loom setup-testing --module <absolute-module-dir> --output <new-directory-outside-source-project> --rsu RSU-001 RSU-002
 context-loom doctor <new-directory>      # no model calls

@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from .io import write_json_atomic, write_text_atomic
+from .testing_preanalysis import load_preanalysis
 
 
 RSU_ID = re.compile(r"RSU-\d{3,}")
@@ -17,30 +18,39 @@ def setup_test_points(module_dir: Path, output_dir: Path, rsu_ids: list[str]) ->
         raise ValueError("provide distinct RSU IDs, e.g. --rsu RSU-001 RSU-002")
     if output_dir.exists():
         raise ValueError(f"output already exists; choose a new isolated directory: {output_dir}")
-    project = next((p for p in module_dir.parents if (p / "global" / "project-context.md").is_file()), None)
-    if project is None or not module_dir.is_relative_to(project / "modules"):
-        raise ValueError("module must be under a project with global/project-context.md and modules/")
+    if not module_dir.is_dir():
+        raise ValueError(f"module does not exist: {module_dir}")
+    project = next((p for p in module_dir.parents if (p / "modules").is_dir()
+                    and module_dir.is_relative_to((p / "modules").resolve())), None)
+    if project is None:
+        raise ValueError("module must be under a project's modules/ directory")
     if output_dir.is_relative_to(project):
         raise ValueError("output must be outside the existing project to keep its sources and outputs untouched")
+    preanalysis = load_preanalysis(module_dir, project)
     required = ["00-module-requirement-pack.md", "01-context-pack.md", "02-sentence-test-point-map.md"]
-    for filename in required:
-        if not (module_dir / filename).is_file():
-            raise ValueError(f"missing preanalysis input: {module_dir / filename}")
-    requirement = (module_dir / required[0]).read_text(encoding="utf-8")
-    mapping = (module_dir / required[2]).read_text(encoding="utf-8")
-    rows = {}
-    for line in mapping.splitlines():
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) == 8 and RSU_ID.fullmatch(cells[0]):
-            if cells[0] in rows:
-                raise ValueError(f"duplicate RSU mapping: {cells[0]}")
-            rows[cells[0]] = cells
+    if preanalysis is None:
+        if not (project / "global" / "project-context.md").is_file():
+            raise ValueError("legacy module requires global/project-context.md; custom context paths need a preanalysis manifest")
+        for filename in required:
+            if not (module_dir / filename).is_file():
+                raise ValueError(f"missing preanalysis input: {module_dir / filename}")
+        requirement = (module_dir / required[0]).read_text(encoding="utf-8")
+        mapping = (module_dir / required[2]).read_text(encoding="utf-8")
+        rows = {}
+        for line in mapping.splitlines():
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if len(cells) == 8 and RSU_ID.fullmatch(cells[0]):
+                if cells[0] in rows:
+                    raise ValueError(f"duplicate RSU mapping: {cells[0]}")
+                rows[cells[0]] = cells
+    else:
+        rows = preanalysis.rows
     selected = []
     for rsu_id in rsu_ids:
         if rsu_id not in rows:
             raise ValueError(f"RSU not found in the original mapping: {rsu_id}")
         row = rows[rsu_id]
-        if (row[3] != "SRC-MOD" or
+        if preanalysis is None and (row[3] != "SRC-MOD" or
                 re.sub(r"\s+", "", row[2]) not in re.sub(r"\s+", "", requirement) or
                 row[7] != "captured"):
             raise ValueError(f"RSU lacks a captured, literal module requirement: {rsu_id}")
@@ -56,7 +66,16 @@ def setup_test_points(module_dir: Path, output_dir: Path, rsu_ids: list[str]) ->
     for row in selected:
         rsu_id, parent, quote, _, location, related, questions, _ = row
         context_refs = []
-        for ref in re.findall(r"(?:FC|DC)-\d{3}", related):
+        supporting_rows = []
+        if preanalysis is not None:
+            dynamic, supporting_rows = preanalysis.task_inputs(rsu_id)
+            for item in dynamic:
+                ref = item["context_id"]
+                if ref not in seen_contexts:
+                    contexts.append(item)
+                    seen_contexts.add(ref)
+                context_refs.append(ref)
+        for ref in ([] if preanalysis else re.findall(r"(?:FC|DC)-\d{3}", related)):
             folder = "context-cards" if ref.startswith("FC-") else "data-closures"
             matches = list((module_dir / folder).glob(ref + "-*.md"))
             if len(matches) != 1:
@@ -65,7 +84,7 @@ def setup_test_points(module_dir: Path, output_dir: Path, rsu_ids: list[str]) ->
                 contexts.append({"context_id": ref, "path": source_path(str(matches[0].relative_to(module_dir)))})
                 seen_contexts.add(ref)
             context_refs.append(ref)
-        if questions != "无":
+        if preanalysis is None and questions != "无":
             filename = "03-clarification-questions.md"
             if not (module_dir / filename).is_file():
                 raise ValueError(f"missing clarification resource: {filename}")
@@ -76,12 +95,14 @@ def setup_test_points(module_dir: Path, output_dir: Path, rsu_ids: list[str]) ->
         tasks.append({
             "task_id": rsu_id,
             "title": f"测试点：{location}",
-            "source_refs": ["SRC-GLOBAL", "SRC-MOD", "CTX"],
+            "source_refs": list(preanalysis.roles.values()) if preanalysis else ["SRC-GLOBAL", "SRC-MOD", "CTX"],
             "context_refs": context_refs,
             "payload": {
                 "kind": "test-point-generation", "source_location": location,
                 "parent_requirement": parent, "requirement_quote": quote,
                 "question_refs": questions,
+                "rsu_row": row,
+                "supporting_rsu_rows": supporting_rows,
                 "instructions": (
                     "只针对当前 RSU 生成必要的、各自可独立判定的测试点，避免同义重复和跨模块扩展。"
                     "content 必须是 JSON 字符串，内容结构为 {\"points\":[{\"title\":\"...\","
@@ -97,6 +118,10 @@ def setup_test_points(module_dir: Path, output_dir: Path, rsu_ids: list[str]) ->
         "workflow_id": "testing-" + "-".join(r.lower() for r in rsu_ids),
         "domain": "testing-test-points", "root": str(project),
         "sources": [
+            {"source_id": ref, "path": preanalysis.resources[ref].relative_to(project).as_posix(),
+             "role": {"global_context": "context", "module_requirement": "requirement", "module_context": "module-context"}[role]}
+            for role, ref in preanalysis.roles.items()
+        ] if preanalysis else [
             {"source_id": "SRC-GLOBAL", "path": "global/project-context.md", "role": "context"},
             {"source_id": "SRC-MOD", "path": source_path(required[0]), "role": "requirement"},
             {"source_id": "CTX", "path": source_path(required[1]), "role": "module-context"},

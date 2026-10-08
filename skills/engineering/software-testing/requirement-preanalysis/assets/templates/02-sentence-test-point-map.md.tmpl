@@ -1,0 +1,59 @@
+# {{MODULE_NAME}}原文需求单元映射
+
+## 定位
+
+本文件保存“需求原文到原文单元”的无损映射，不是正式测试点、测试方案或测试用例。
+
+- `RSU-ID` 表示 Requirement Source Unit，即原文需求单元。
+- 先按语义完整契约拆分；来源编号、子规则、表格行或附件条款只是边界线索，不按标点、换行或最小编号项机械断句。
+- `原文内容` 保持来源可见文字，不改写成断言，不提前生成测试点。
+- `父级条件（原文）` 只放理解当前单元所需的最小条件/触发/状态/范围；可独立观察的父级动作或结果必须完整出现在某个 RSU 的 `原文内容` 中。
+- 人工确认使用 `Q-ID`，功能链路和验证位置使用 `FC-ID`，数据闭包使用 `DC-ID`，不伪装成需求原文。
+
+## 引用入口
+
+| 资源 ID | 可点击文件 | 定位用途 |
+|---|---|---|
+| SRC-MOD | [当前模块需求](./00-module-requirement-pack.md) | {{MODULE_SOURCE_LOCATION}} |
+| SRC-GLOBAL | [项目全局上下文]({{GLOBAL_CONTEXT_LINK}}) | 项目定位、范围和术语 |
+| CTX | [模块 Context Pack](./01-context-pack.md) | 模块背景、能力、详细逻辑和边界 |
+| Q-INDEX | [问题确认清单](./03-clarification-questions.md) | 问题、答案和状态 |
+| FC-INDEX | [Context Cards](./context-cards/README.md) | 可复用局部上下文索引 |
+{{DATA_CLOSURE_MAP_RESOURCES}}
+
+## 当前模块原文单元
+
+### 原文结构与拆分决策
+
+本表先于 RSU 映射建立。它必须覆盖当前范围内的每个来源结构范围，明确该范围是独立契约、复合契约、字段碎片、结构容器、视觉占位符还是未决范围。`one-rsu` 恰好对应一个完整 RSU；`not-rsu` 不表示遗漏，而表示该来源范围不单独创建 RSU；字段碎片应在“对应 RSU”中写出吸收它的复合 RSU，纯容器或视觉占位符没有吸收 RSU 时写 `无`。建立 RSU 后反查所有父级条件：含动作、状态变化、跳转、提示、展示等可观察行为的完整父级文字，不能只存在于父级条件列。
+
+| 来源范围 | 语义角色 | 拆分处理 | 对应 RSU | 判定理由 |
+|---|---|---|---|---|
+| SRC-MOD > {{SOURCE_SCOPE}} | independent-contract | one-rsu | RSU-001 | {{PARTITION_DECISION_REASON}} |
+
+### RSU 映射
+
+| RSU-ID | 父级条件（原文） | 原文内容 | 来源 | 来源定位 | 相关上下文 | 相关问题 | 状态 |
+|---|---|---|---|---|---|---|---|
+| RSU-001 | 无 | {{SOURCE_TEXT}} | SRC-MOD | {{SOURCE_LOCATION}} | {{RSU_RELATED_CONTEXT}} | 无 | {{RSU_STATUS}} |
+
+## 原文来源覆盖检查
+
+本表只检查原始资料是否已映射、待补充或明确排除，用于防遗漏复核；不保存人工结论和验证步骤，也不作为单个 RSU 的直接输入。
+
+与拆分决策表使用完全相同的 `SRC-ID > 语义范围` 对账：`one-rsu -> mapped`、`not-rsu -> not-rsu`、`pending -> pending|pending-context`；RSU 引用必须一致，`pending` 必须关联未关闭的 `Q-ID`。
+
+| 原文来源范围 | 处理结果 | 对应 RSU/问题 | 说明 |
+|---|---|---|---|
+| SRC-MOD > {{SOURCE_SCOPE}} | mapped | RSU-001 | {{COVERAGE_NOTE}} |
+
+## 后续使用规则
+
+每次固定读取：
+
+1. `SRC-GLOBAL` 项目全局上下文全文。
+2. `SRC-MOD` 当前模块需求全文。
+3. `CTX` 中的模块背景、能力、已确认详细逻辑和理解边界。
+4. 当前 `RSU-ID` 的完整映射行。
+
+再解析并读取当前 RSU 显式声明的 Q、FC、DC、来源片段、附件、API、数据库、配置、环境和必要跨 RSU 映射。FC/DC 卡内引用入口和依据资源只作为追溯证据保留路径、用途和正文哈希，不自动展开全文或继承其他 RSU 的动态依赖；确需来源正文时，将聚焦资源 ID 直接加入当前 RSU 的“相关上下文”。

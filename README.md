@@ -76,8 +76,11 @@ exactly one Skill without a menu, use:
 npx skills@latest add zhangyudi-01/context-loom --skill loom-test-points --agent codex --global --yes
 ```
 
-Installing Skills provides agent instructions **only**; it does not install the Python
-`context-loom` runtime. Install the runtime separately before using its commands:
+Installing Skills provides agent instructions and their bundled resources; it does not install
+the Python `context-loom` runtime. `testing-requirement-preanalysis` runs conversationally with
+its own scaffold and validator and needs only Python 3.11+, not the runtime. See the
+[requirement preanalysis quick start](docs/quickstart-testing-preanalysis.md).
+Install the runtime separately before using its commands:
 
 ```powershell
 python -m pip install "git+https://github.com/zhangyudi-01/context-loom.git"
@@ -150,7 +153,10 @@ The generic control plane and initial Codex CLI host implement:
 - focused packet generation;
 - structured result submission and scope validation;
 - deterministic Markdown assembly and traceability JSON;
-- initial Context Loom and software-testing Skill guidance (not a full migration of the original project's runners);
+- a complete conversational testing requirement-preanalysis Skill with source-faithful RSUs,
+  clarification/context/data-closure contracts, bundled templates, scaffolding and validation;
+- manifest-aware handoff of ready RSUs and focused dependencies to the isolated test-point pilot;
+- initial guidance for other software-testing stages (not a full migration of the original project's runners);
 - programmatic domain validation and artifact-finalization hooks;
 - an isolated, resumable testing-domain full-flow trial (not the production testing runner);
 - portable JSON schemas and a runnable example.
@@ -167,6 +173,7 @@ the runtime runs batches sequentially by default and does not depend on automati
 - [Writing a domain workflow](docs/writing-a-domain-workflow.md)
 - [Agent adapters](docs/agent-adapters.md)
 - [Migration from existing testing Skills](docs/migration-from-existing-skills.md)
+- [Testing requirement preanalysis](docs/quickstart-testing-preanalysis.md)
 
 ## License
 

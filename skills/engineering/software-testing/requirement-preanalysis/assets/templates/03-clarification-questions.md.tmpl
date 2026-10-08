@@ -1,0 +1,37 @@
+# {{MODULE_NAME}}问题确认清单
+
+## 引用入口
+
+- [原文需求单元映射](./02-sentence-test-point-map.md)
+- [模块 Context Pack](./01-context-pack.md)
+- [Context Cards](./context-cards/README.md)
+
+本文件中的 `RSU-ID`、`Q-ID` 和 `FC-ID` 使用普通 ID，不创建同文件或深层锚点链接。
+
+## 已确认问题与结论
+
+| Q-ID | 关联原文/上下文 | 状态 | 人工确认结论 | 回填结果 |
+|---|---|---|---|---|
+| Q-001 | {{ANSWERED_RELATION}} | answered | {{ANSWERED_CONCLUSION}} | {{BACKFILL_RESULT}} |
+
+## 待确认问题
+
+| Q-ID | 关联来源 | 状态 | 问题 | 未确认时的处理 |
+|---|---|---|---|---|
+| Q-002 | {{PENDING_RELATION}} | pending | {{PENDING_QUESTION}} | {{PENDING_HANDLING}} |
+
+## 已确认的模块逻辑摘要
+
+- {{CONFIRMED_LOGIC_SUMMARY}}
+
+## 执行准备项
+
+- {{EXECUTION_PREPARATION}}
+
+## 回填规则
+
+- 人工回答必须回填本文件，不能只停留在对话中。
+- 回答形成模块级结论时同步更新 Context Pack。
+- 回答形成局部链路、契约或验证位置时同步更新相关 Context Card。
+- 回答不改写已保留的 RSU 原文。
+- 范围结论保留为 Q 和 Context Pack 边界，不伪装成需求原文。

@@ -1,0 +1,99 @@
+# {{MODULE_NAME}} Context Pack
+
+## 目标
+
+{{CONTEXT_GOAL}}
+
+后续逐 `RSU-ID` 生成测试点时，`SRC-GLOBAL` 全文、`SRC-MOD` 全文、本文件中的模块逻辑基线和当前 `RSU-ID` 映射行是固定输入。
+
+## 资源索引
+
+| 资源 ID | 可点击文件 | 用途 |
+|---|---|---|
+| SRC-MOD | [当前模块需求](./00-module-requirement-pack.md) | 当前模块需求原文 |
+| SRC-GLOBAL | [项目全局上下文]({{GLOBAL_CONTEXT_LINK}}) | 项目定位、范围和术语 |
+| CTX | [模块 Context Pack](./01-context-pack.md) | 模块背景、能力、详细逻辑和边界 |
+| RSU-INDEX | [原文需求单元映射](./02-sentence-test-point-map.md) | RSU、来源和依赖索引 |
+| Q-INDEX | [问题确认清单](./03-clarification-questions.md) | 问题、答案和状态 |
+| FC-INDEX | [Context Cards](./context-cards/README.md) | 可复用局部上下文索引 |
+{{DATA_CLOSURE_CONTEXT_RESOURCES}}
+
+## 当前阶段边界
+
+### In Scope
+
+- {{IN_SCOPE}}
+
+### Out of Scope
+
+- {{OUT_OF_SCOPE}}
+
+## 资料优先级
+
+1. 当前模块需求 `SRC-MOD`。
+2. 本次人工确认结论 `Q-INDEX`。
+3. 当前需求全文和共享规则。
+4. 经确认继续沿用的历史资料。
+5. 当前需求引用的附件、API、数据库、配置和环境资料。
+6. 项目全局上下文 `SRC-GLOBAL`。
+
+## 模块在需求全文中的背景与定位
+
+- {{MODULE_BACKGROUND}}
+
+## 模块目标与能力
+
+{{MODULE_CAPABILITY}}
+
+## 已确认的详细逻辑
+
+### 主链路
+
+```text
+{{MAIN_FLOW}}
+```
+
+### 逻辑说明
+
+1. {{LOGIC_STEP_1}}
+
+## 已确认的理解边界
+
+- {{CONFIRMED_BOUNDARY}}
+
+## 领域契约边界
+
+{{DOMAIN_CONTRACT_BOUNDARY}}
+
+## 原文、上下文和验证信息的边界
+
+| 信息类型 | 保存位置 | 示例 |
+|---|---|---|
+| 需求原文单元 | `02-sentence-test-point-map.md` | `RSU-ID` 对应的来源文字 |
+| 人工确认或范围结论 | `03-clarification-questions.md` | 时间基准、验证层级、排除范围 |
+| 功能链路或既有契约 | `context-cards/` | 页面到外部系统链路、文件或接口契约 |
+| 数据闭包 | `data-closures/`（适用时） | 表角色、连接/过滤、数据状态、查询和清理契约 |
+| 执行环境准备 | `03-clarification-questions.md` | 环境地址、任务名称、账号权限 |
+
+## 后续测试点生成输入规则
+
+### 固定输入
+
+1. `SRC-GLOBAL` 项目全局上下文全文。
+2. `SRC-MOD` 当前模块需求全文。
+3. `CTX` 中的模块背景、能力、已确认详细逻辑和理解边界。
+4. 当前 `RSU-ID` 的完整映射行。
+
+### 动态输入
+
+1. 当前来源定位指向的实际内容。
+2. 相关 `Q-ID` 的答案和状态。
+3. 相关 `FC-ID` 和 `DC-ID` 的实际内容。
+4. FC/DC 卡必须写全测试点阶段所需语义；卡内引用的 schema、SQL、API、代码或人工确认默认只作为追溯证据，由下游记录路径、用途和正文哈希。
+5. 当前 RSU 需要的附件、配置、环境和跨 RSU 依赖。
+
+只有当前 RSU 显式声明的资源加载正文；确需证据原文时，将聚焦资源 ID 直接写入 RSU 的“相关上下文”，不能依赖下游递归展开整份附件。
+
+## 当前缺口
+
+- {{CURRENT_GAP}}
